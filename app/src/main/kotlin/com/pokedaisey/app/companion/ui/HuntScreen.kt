@@ -20,7 +20,9 @@ import com.pokedaisey.app.companion.HuntTracker
 import com.pokedaisey.app.companion.SHINY_CUTOFF_MOD
 import com.pokedaisey.app.companion.SHINY_CUTOFF_STOCK
 import com.pokedaisey.app.companion.ShinyFind
+import com.pokedaisey.app.companion.data.MonView
 import com.pokedaisey.app.companion.data.speciesName
+import com.pokedaisey.app.companion.shinyValue
 
 /**
  * HUNT: the soft-reset shiny tracker ([HuntTracker]) in the OPTION look. The
@@ -31,7 +33,7 @@ import com.pokedaisey.app.companion.data.speciesName
  * the tracker missed; NEW HUNT zeroes this hunt after a confirm.
  */
 @Composable
-fun HuntScreen(modifier: Modifier = Modifier, onRestart: (() -> Unit)? = null) {
+fun HuntScreen(modifier: Modifier = Modifier, onRestart: (() -> Unit)? = null, party: List<MonView> = emptyList()) {
     val m = rememberGbaTextMetrics()
     val small = rememberGbaTextMetrics(1f)
     val st by HuntTracker.state.collectAsState()
@@ -40,6 +42,10 @@ fun HuntScreen(modifier: Modifier = Modifier, onRestart: (() -> Unit)? = null) {
     val cutoff = if (st.modOdds) SHINY_CUTOFF_MOD else SHINY_CUTOFF_STOCK
     val odds = if (st.modOdds) "1/256 (MOD)" else "1/8192 (STOCK)"
     val seen = st.lastSeen?.let { "${speciesName(it.species)}  ${it.value}" } ?: "NONE YET"
+    // Live, straight from the party: tells apart "can't read this Pokémon's ID" from "nothing new to count".
+    val firstMon = party.firstOrNull { !it.isEgg }?.let {
+        if (it.personality == 0L || it.otId == 0L) "NO ID READ" else "${it.name}  ${shinyValue(it.personality, it.otId)}"
+    } ?: "EMPTY"
     val found = st.lastShiny?.let { "${speciesName(it.species)} AT ${it.atResets}" } ?: "NONE YET"
     val closest = st.closest?.let { "${speciesName(it.species)}  ${it.value}" } ?: "NONE YET"
     // The number must drop below the cutoff to be shiny: how far above it the best one was.
@@ -48,7 +54,8 @@ fun HuntScreen(modifier: Modifier = Modifier, onRestart: (() -> Unit)? = null) {
         Triple("RESETS", st.resets.toString(), {}),
         Triple("ALL RESETS", st.totalResets.toString(), {}),
         Triple("SHINY ODDS", odds) { HuntTracker.setModOdds(!st.modOdds) },
-        Triple("LAST WILD", seen, {}),
+        Triple("LAST MON", seen, {}),
+        Triple("PARTY 1", firstMon, {}),
         Triple("CLOSEST", closest, {}),
         Triple("MISSED BY", missedBy, {}),
         Triple("LAST SHINY", found, {}),

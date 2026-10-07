@@ -340,7 +340,7 @@ fun CompanionScreen(
                             onTabsChanged = { chosenTabs = it },
                         )
                     } else if (tab == "HUNT") {
-                        HuntScreen(Modifier.fillMaxSize(), onRestart = settings?.let { s -> { s.restartGame() } })
+                        HuntScreen(Modifier.fillMaxSize(), onRestart = settings?.let { s -> { s.restartGame() } }, party = snapshot.party)
                     } else if (tab == "STATES") {
                         // Same: its own OPTION-style windows over the backdrop.
                         StatesScreen(slots, snapshot.frameCounter)

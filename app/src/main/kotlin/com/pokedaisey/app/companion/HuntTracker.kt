@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 /** A shiny the tracker saw: which Pokémon, the reset count when it showed up, and where ([wild] = in a wild battle). */
 data class ShinyFind(val species: Int, val atResets: Int, val wild: Boolean)
 
-/** The latest Pokémon the check looked at, so HUNT shows the tracker is alive. */
+/** A Pokémon the check looked at (wild, or new in the party), so HUNT shows the tracker is alive. */
 data class LastSeen(val species: Int, val value: Int, val wild: Boolean)
 
 /**
@@ -59,7 +59,6 @@ object HuntTracker {
     // Pokémon (personality:OT id) already counted towards CLOSEST, so one standing in
     // the party or in front of the player isn't counted again on every sample.
     private var known = LinkedHashSet<String>()
-    private var lastSeenKey = ""
 
     /** Loads the saved counts; call once with the app context. */
     fun attach(context: Context) {
@@ -102,11 +101,8 @@ object HuntTracker {
                 if (mon.personality == 0L || mon.otId == 0L) continue
                 val value = shinyValue(mon.personality, mon.otId)
                 val key = "${mon.personality}:${mon.otId}"
-                if (wild && key != lastSeenKey) {
-                    lastSeenKey = key
-                    st = st.copy(lastSeen = LastSeen(mon.species, value, true))
-                }
                 if (known.add(key)) {
+                    st = st.copy(lastSeen = LastSeen(mon.species, value, wild))
                     if (st.closest == null || value < st.closest!!.value) st = st.copy(closest = LastSeen(mon.species, value, wild))
                     while (known.size > MAX_KNOWN) known.remove(known.first())
                 }
