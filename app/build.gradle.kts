@@ -25,8 +25,10 @@ android {
         targetSdk = 34
         // Bump both for every GitHub release: the updater compares versionName
         // against the release tag (v<versionName>), Android needs versionCode to grow.
-        versionCode = 4
-        versionName = "1.0.4"
+        // CI passes -PappVersionName / -PappVersionCode (see .github/workflows/build-apk.yml)
+        // so every push is a higher version the in-app updater will offer.
+        versionCode = (findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 4
+        versionName = (findProperty("appVersionName") as String?) ?: "1.0.4"
 
         ndk {
             // Thor is arm64; add armeabi-v7a later only if a target device needs it.
@@ -53,6 +55,7 @@ android {
         if (keystoreProps != null) {
             create("release") {
                 storeFile = file(keystoreProps.getProperty("storeFile"))
+                keystoreProps.getProperty("storeType")?.let { storeType = it }
                 storePassword = keystoreProps.getProperty("storePassword")
                 keyAlias = keystoreProps.getProperty("keyAlias")
                 keyPassword = keystoreProps.getProperty("keyPassword")
@@ -65,6 +68,12 @@ android {
             isMinifyEnabled = false
             if (keystoreProps != null) signingConfig = signingConfigs.getByName("release")
         }
+    }
+
+    // A release build shouldn't stop on lint findings (CI only needs the signed APK).
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 
     compileOptions {

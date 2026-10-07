@@ -1,9 +1,16 @@
-name: Build debug APK
+name: Build and release APK
+
+# Every push to main builds a signed release APK and publishes it as a GitHub
+# Release (v1.1.<run number>); the app's updater (Settings > VERSION) offers it.
+# Needs two repo secrets: KEYSTORE_B64 (the .p12, base64) and KEYSTORE_PASSWORD.
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -37,10 +44,39 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
-      - name: Build
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+      - name: Write signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::error::Add the KEYSTORE_B64 and KEYSTORE_PASSWORD repo secrets first."
+            exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/pokedaisey.p12"
+          printf 'storeFile=%s\nstoreType=pkcs12\nstorePassword=%s\nkeyAlias=pokedaisey\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/pokedaisey.p12" "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > keystore.properties
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: PokeDaisey-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+      - name: Version
+        id: v
+        run: |
+          echo "name=1.1.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "code=$((100 + ${{ github.run_number }}))" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: >
+          gradle :app:assembleRelease --no-daemon --stacktrace
+          -PappVersionName=${{ steps.v.outputs.name }}
+          -PappVersionCode=${{ steps.v.outputs.code }}
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          apk="PokeDaisey-${{ steps.v.outputs.name }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$apk"
+          git log -1 --pretty=%B > release-notes.txt
+          gh release create "v${{ steps.v.outputs.name }}" "$apk" \
+            --target "${{ github.sha }}" \
+            --title "PokeDaisey ${{ steps.v.outputs.name }}" \
+            --notes-file release-notes.txt

@@ -12,6 +12,7 @@ local.mk
 keystore.properties
 *.jks
 *.keystore
+*.p12
 
 # Gradle / Android build outputs
 .gradle/

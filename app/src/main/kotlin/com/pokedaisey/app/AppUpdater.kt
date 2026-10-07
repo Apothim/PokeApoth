@@ -13,7 +13,9 @@ import java.net.URL
  */
 object AppUpdater {
 
-    const val REPO = "lidor30/pokedaisey"
+    // This fork's own releases (published by .github/workflows/build-apk.yml), not the
+    // original project's: its versions would replace the fork's changes.
+    const val REPO = "Apothim/pokedaisey-1.0.5"
     const val RELEASES_PAGE = "https://github.com/$REPO/releases"
 
     class Release(
