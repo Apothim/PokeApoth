@@ -22,6 +22,8 @@ data class HuntState(
     val modOdds: Boolean = true,
     val lastShiny: ShinyFind? = null,
     val lastSeen: LastSeen? = null,
+    /** The lowest shiny number this hunt has seen (0 = shiny), so the player can tell how close they got. */
+    val closest: LastSeen? = null,
     val alert: Boolean = false,
 )
 
@@ -54,6 +56,9 @@ object HuntTracker {
     private var prefs: android.content.SharedPreferences? = null
     private var lastFrame = 0L
     private var alerted = LinkedHashSet<String>()
+    // Pokémon (personality:OT id) already counted towards CLOSEST, so one standing in
+    // the party or in front of the player isn't counted again on every sample.
+    private var known = LinkedHashSet<String>()
     private var lastSeenKey = ""
 
     /** Loads the saved counts; call once with the app context. */
@@ -63,8 +68,11 @@ object HuntTracker {
             val p = context.getSharedPreferences("pokedaisey_hunt", Context.MODE_PRIVATE)
             prefs = p
             alerted = LinkedHashSet(p.getString("alerted", null)?.split(",")?.filter { it.isNotBlank() }.orEmpty())
+            known = LinkedHashSet(p.getString("known", null)?.split(",")?.filter { it.isNotBlank() }.orEmpty())
             val species = p.getInt("shiny_species", 0)
+            val closestSpecies = p.getInt("closest_species", 0)
             _state.value = HuntState(
+                closest = if (closestSpecies == 0) null else LastSeen(closestSpecies, p.getInt("closest_value", 0), p.getBoolean("closest_wild", false)),
                 resets = p.getInt("resets", 0),
                 totalResets = p.getInt("total", 0),
                 modOdds = p.getBoolean("mod_odds", true),
@@ -98,6 +106,10 @@ object HuntTracker {
                     lastSeenKey = key
                     st = st.copy(lastSeen = LastSeen(mon.species, value, true))
                 }
+                if (known.add(key)) {
+                    if (st.closest == null || value < st.closest!!.value) st = st.copy(closest = LastSeen(mon.species, value, wild))
+                    while (known.size > MAX_KNOWN) known.remove(known.first())
+                }
                 if (value < cutoff && alerted.add(key)) {
                     st = st.copy(alert = true, lastShiny = ShinyFind(mon.species, st.resets, wild))
                     while (alerted.size > MAX_ALERTED) alerted.remove(alerted.first())
@@ -109,7 +121,7 @@ object HuntTracker {
 
     fun dismissAlert() = update { it.copy(alert = false) }
     fun addReset(delta: Int) = update { it.copy(resets = (it.resets + delta).coerceAtLeast(0)) }
-    fun newHunt() = update { it.copy(resets = 0, alert = false) }
+    fun newHunt() = update { it.copy(resets = 0, closest = null, alert = false) }
     fun setModOdds(on: Boolean) = update { it.copy(modOdds = on) }
 
     private fun update(change: (HuntState) -> HuntState) = synchronized(lock) { commit(change(_state.value)) }
@@ -122,6 +134,9 @@ object HuntTracker {
             putInt("total", st.totalResets)
             putBoolean("mod_odds", st.modOdds)
             putString("alerted", alerted.joinToString(","))
+            putString("known", known.joinToString(","))
+            st.closest?.let { putInt("closest_species", it.species); putInt("closest_value", it.value); putBoolean("closest_wild", it.wild) }
+                ?: run { remove("closest_species"); remove("closest_value"); remove("closest_wild") }
             st.lastShiny?.let { putInt("shiny_species", it.species); putInt("shiny_at", it.atResets); putBoolean("shiny_wild", it.wild) }
         }?.apply()
     }
@@ -129,4 +144,5 @@ object HuntTracker {
     /** ~2 minutes of game time: a counter that fell to less than this just booted. */
     private const val RESET_FRAMES = 7200L
     private const val MAX_ALERTED = 200
+    private const val MAX_KNOWN = 300
 }

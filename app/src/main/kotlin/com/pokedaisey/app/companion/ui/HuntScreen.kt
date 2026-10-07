@@ -26,11 +26,12 @@ import com.pokedaisey.app.companion.data.speciesName
  * HUNT: the soft-reset shiny tracker ([HuntTracker]) in the OPTION look. The
  * rows show this hunt's resets, every reset ever, the shiny odds in use (tap
  * to switch between the modded 1/256 and stock 1/8192), the last wild Pokémon
- * checked with its shiny number, and the last shiny found. +1 / -1 fix a count
+ * checked with its shiny number, the CLOSEST number this hunt saw (and how far
+ * above the cutoff it was), and the last shiny found. +1 / -1 fix a count
  * the tracker missed; NEW HUNT zeroes this hunt after a confirm.
  */
 @Composable
-fun HuntScreen(modifier: Modifier = Modifier) {
+fun HuntScreen(modifier: Modifier = Modifier, onRestart: (() -> Unit)? = null) {
     val m = rememberGbaTextMetrics()
     val small = rememberGbaTextMetrics(1f)
     val st by HuntTracker.state.collectAsState()
@@ -40,11 +41,16 @@ fun HuntScreen(modifier: Modifier = Modifier) {
     val odds = if (st.modOdds) "1/256 (MOD)" else "1/8192 (STOCK)"
     val seen = st.lastSeen?.let { "${speciesName(it.species)}  ${it.value}" } ?: "NONE YET"
     val found = st.lastShiny?.let { "${speciesName(it.species)} AT ${it.atResets}" } ?: "NONE YET"
+    val closest = st.closest?.let { "${speciesName(it.species)}  ${it.value}" } ?: "NONE YET"
+    // The number must drop below the cutoff to be shiny: how far above it the best one was.
+    val missedBy = st.closest?.let { if (it.value < cutoff) "SHINY!" else (it.value - cutoff + 1).toString() } ?: "-"
     val rows = listOf<Triple<String, String?, () -> Unit>>(
         Triple("RESETS", st.resets.toString(), {}),
         Triple("ALL RESETS", st.totalResets.toString(), {}),
         Triple("SHINY ODDS", odds) { HuntTracker.setModOdds(!st.modOdds) },
         Triple("LAST WILD", seen, {}),
+        Triple("CLOSEST", closest, {}),
+        Triple("MISSED BY", missedBy, {}),
         Triple("LAST SHINY", found, {}),
     )
 
@@ -56,13 +62,18 @@ fun HuntScreen(modifier: Modifier = Modifier) {
                 Column(Modifier.fillMaxSize()) {
                     OptionRows(rows, m, Modifier.fillMaxWidth().weight(1f), minRow = m.rowHeight * 1.1f, labelWeight = 0.45f)
                     GbaText(
-                        "Counts a reset each time the game reboots. A wild POKéMON or one in your party is shiny when its number is below $cutoff.",
+                        "Counts a reset each time the game reboots. A wild POKéMON or one in your party is shiny when its number is below $cutoff. CLOSEST is the lowest number this hunt saw.",
                         OptionColors.muted, OptionColors.mutedShadow, small, maxLines = 3,
                         modifier = Modifier.padding(horizontal = m.u * 8, vertical = m.u * 4),
                     )
                 }
             }
             Spacer(Modifier.height(m.u * 4))
+            // Reboots the game and reloads its save (it counts as a reset on its own); no confirm, to keep hunting quick.
+            if (onRestart != null) {
+                OptionButton("RESTART GAME", m, onClick = onRestart, emphasis = true, modifier = Modifier.fillMaxWidth().height(m.rowHeight * 1.4f))
+                Spacer(Modifier.height(m.u * 4))
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(m.u * 4), modifier = Modifier.fillMaxWidth()) {
                 OptionButton("-1", m, onClick = { HuntTracker.addReset(-1) }, modifier = Modifier.weight(1f).height(m.rowHeight * 1.4f))
                 OptionButton("+1", m, onClick = { HuntTracker.addReset(1) }, modifier = Modifier.weight(1f).height(m.rowHeight * 1.4f))
