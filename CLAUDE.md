@@ -376,6 +376,14 @@ release with an `.apk`, skipping drafts and pre-releases (publish a test build a
 Settings > VERSION. Release signing: untracked `keystore.properties` → `~/.android/pokedaisey-release.jks`
 on this Mac (same key for every release, or updates won't install).
 
+**HUNT tab (soft-reset shiny tracker, off the bar by default)**: `HuntTracker` (`companion/HuntTracker.kt`, a
+singleton fed by `TelemetryStore.refresh()`, counts persisted in its own `pokedaisey_hunt` prefs) counts a reset
+whenever `gMain`'s frame counter falls back below ~2 minutes of game time, and checks every party mon and the wild
+foe (`NativeConfig.wildFoeMon` = gEnemyParty[0], wild battles only, set for Unbound alone and not yet checked live)
+for a shiny: `TID ^ SID ^ PID-hi ^ PID-lo` below the cutoff (`SHINY_CUTOFF_MOD` 256 = the modded Unbound ROM
+`ea56a6b2…`, which patched its `cmp #7` to `#255`; `SHINY_CUTOFF_STOCK` 8). Each shiny alerts once (`ShinyBanner`
+over every tab). Two resets inside one ~1 Hz sample count once; +1 / -1 on the tab fix it.
+
 **Unsupported ROMs**: `CompanionSupport.isSupported(file)` (FireRed/Emerald game code, ≤16 MB,
 retail LeafGreen rev 0/1 / Ruby / Sapphire rev 1/2 — `TelemetrySampler.OTHER_RETAIL_CODES`,
 read as FireRed / Emerald — or a >16 MB hack whose SHA1 is in `TelemetrySampler.SUPPORTED_HACK_SHA1S`) mirrors the

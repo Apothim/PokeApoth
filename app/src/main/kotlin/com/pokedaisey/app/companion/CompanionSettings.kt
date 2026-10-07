@@ -98,8 +98,9 @@ interface CompanionSettings {
 
 /** Every tab the player can show or hide, in tab-bar order. BATTLE (while a
  * battle runs) and SETTINGS (the way to the hidden ones) are always there.
- * CARD (the TRAINER CARD) starts off the bar, under SETTINGS > TOOLS. */
-val COMPANION_TABS = listOf("PARTY", "DEX", "MAP", "ITEMS", "GUIDE", "CARD", "STATES")
+ * CARD (the TRAINER CARD) and HUNT (the soft-reset shiny tracker) start off
+ * the bar, under SETTINGS > TOOLS. */
+val COMPANION_TABS = listOf("PARTY", "DEX", "MAP", "ITEMS", "GUIDE", "CARD", "HUNT", "STATES")
 val DEFAULT_COMPANION_TABS = listOf("PARTY", "DEX", "MAP", "ITEMS", "GUIDE")
 
 /** Tabs next to SETTINGS: six chips in all is as many as fit. During a

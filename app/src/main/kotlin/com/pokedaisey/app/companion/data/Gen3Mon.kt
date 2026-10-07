@@ -69,6 +69,7 @@ fun decodePartyMon(raw: ByteArray, off: Int): Mon? {
         pp = pp,
         exp = exp,
         personality = u32(raw, off),
+        otId = u32(raw, off + 4),
     )
 }
 

@@ -249,6 +249,7 @@ class PokeDaiseyActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.pokedaisey.app.companion.HuntTracker.attach(applicationContext)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         goImmersive()
 

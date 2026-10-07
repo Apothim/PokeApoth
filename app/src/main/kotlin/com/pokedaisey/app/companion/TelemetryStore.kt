@@ -36,6 +36,7 @@ class TelemetryStore {
     fun refresh(): SnapshotView {
         val s = sampler.sample(InProcessReader)
         _snapshot.value = s
+        runCatching { HuntTracker.onSample(s) }.onFailure { Log.w("pokedaisey", "hunt sample failed", it) }
         if (logCount++ % 5 == 0) {
             // pockets=<pocket id>:<count>,... - lets scripts/smoke_test.sh (and
             // manual debugging) verify item CATEGORIZATION specifically, not

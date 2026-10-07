@@ -135,6 +135,9 @@ data class NativeConfig(
     // CARD tab. Retail FireRed / LeafGreen / Emerald and the QoL builds only:
     // the hacks below copy these configs and their saves differ.
     val trainerCard: TrainerCardSave? = null,
+    // gEnemyParty[0]: the wild Pokémon of a wild battle, for HUNT's shiny check
+    // (read in wild battles only; 0 = not known for this game).
+    val wildFoeMon: Long = 0,
 ) {
     val gMainInBattle get() = gMain + inBattleOff
     val gMainVblankCtr get() = gMain + 0x24
@@ -262,6 +265,9 @@ val NATIVE_UNBOUND = NATIVE_FIRERED_REV0
 // NATIVE_UNBOUND itself, which the other CFRU configs reuse as NATIVE_FIRERED_REV0.
 val NATIVE_UNBOUND_WITH_DEX = NATIVE_UNBOUND.copy(
     pokedex = POKEDEX_UNBOUND, guideTables = GUIDE_TABLES_UNBOUND, trainerCard = TRAINER_CARD_UNBOUND,
+    // FireRed's gEnemyParty (right before gPlayerParty, 6 x 100 bytes): CFRU keeps gPlayerParty
+    // where FireRed has it, so this sits there too - not yet checked in a live Unbound battle.
+    wildFoeMon = 0x0202402CL,
 )
 
 // Pokémon Gaia v3.2 - another large (32 MB) BPRE hack, verified 2026-09-20 the
@@ -1194,6 +1200,10 @@ fun readNativeTelemetry(client: MemoryReader, cfg: NativeConfig): Telemetry {
         (0 until PARTY_SIZE).mapNotNull { i -> decodePartyMon(raw, i * cfg.monStride)?.masked(cfg) }
             .filter { it.species != 0 }
     }.getOrDefault(emptyList()) else emptyList()
+    // The wild Pokémon, for HUNT's shiny check (a trainer's party is [enemyParty]'s job).
+    val wildFoe = if (inBattle && !isTrainer && cfg.wildFoeMon != 0L) runCatching {
+        decodePartyMon(client.readCoreMemory(cfg.wildFoeMon, MON_STRUCT_SIZE), 0)?.masked(cfg)?.takeIf { it.species != 0 }
+    }.getOrNull() else null
     // The foe (left) that's out, and the one it's about to send in.
     var enemyActive = -1
     var enemyNext = -1
@@ -1236,6 +1246,7 @@ fun readNativeTelemetry(client: MemoryReader, cfg: NativeConfig): Telemetry {
         playerGender = readPlayerGender(client, cfg),
         mapSecName = if (regionMapSectionId == 0) readHubName(client, cfg) else null,
         trainerCard = readTrainerCard(client, cfg),
+        wildFoe = wildFoe,
     )
 }
 

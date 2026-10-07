@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +63,7 @@ import com.pokedaisey.app.companion.data.activeGame
 import com.pokedaisey.app.companion.data.withMovesVs
 import com.pokedaisey.app.companion.COMPANION_TABS
 import com.pokedaisey.app.companion.DEFAULT_COMPANION_TABS
+import com.pokedaisey.app.companion.HuntTracker
 import com.pokedaisey.app.companion.MAX_BAR_TABS
 import com.pokedaisey.app.companion.ui.theme.QolColors
 import com.pokedaisey.app.companion.ui.theme.QolTheme
@@ -208,6 +210,8 @@ fun CompanionScreen(
         }
         val canUseControls = battleInput != null && !snapshot.isDoubleBattle && isMyTurn
         val showHints = settings?.showHints ?: true
+        // HUNT: a shiny found anywhere raises the banner, whichever tab is open.
+        val hunt by HuntTracker.state.collectAsState()
         val current = if (selectedLabel in tabs || selectedLabel in hiddenTabs) selectedLabel else tabs[0]
         // A hidden tab was opened from SETTINGS: the gear stays lit.
         val selectedIdx = tabs.indexOf(if (current in hiddenTabs) "SETTINGS" else current)
@@ -238,6 +242,10 @@ fun CompanionScreen(
             }
 
             Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+                if (hunt.alert) {
+                    ShinyBanner(hunt.lastShiny, onDismiss = { HuntTracker.dismissAlert() })
+                    Spacer(Modifier.height(8.dp))
+                }
                 if (loaded && !snapshot.connected) {
                     ErrorBanner(snapshot.error ?: "no data yet")
                     Spacer(Modifier.height(8.dp))
@@ -331,6 +339,8 @@ fun CompanionScreen(
                             onOpenTab = { backTab = "SETTINGS"; selectedLabel = it },
                             onTabsChanged = { chosenTabs = it },
                         )
+                    } else if (tab == "HUNT") {
+                        HuntScreen(Modifier.fillMaxSize())
                     } else if (tab == "STATES") {
                         // Same: its own OPTION-style windows over the backdrop.
                         StatesScreen(slots, snapshot.frameCounter)

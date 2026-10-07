@@ -46,7 +46,7 @@ class TelemetrySampler {
         val raw = runCatching { reader.readCoreMemory(partyAddr, n * MON_STRUCT_SIZE) }.getOrNull() ?: return t
         val party = t.party.mapIndexed { i, mon ->
             val ram = if (i < n) decodePartyMon(raw, i * MON_STRUCT_SIZE) else null
-            if (ram?.exp != null && ram.species == mon.species && ram.level == mon.level) mon.copy(exp = ram.exp, personality = ram.personality) else mon
+            if (ram?.exp != null && ram.species == mon.species && ram.level == mon.level) mon.copy(exp = ram.exp, personality = ram.personality, otId = ram.otId) else mon
         }
         return t.copy(party = party)
     }

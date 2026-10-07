@@ -31,6 +31,8 @@ data class MonView(
     val exp: ExpProgress? = null,
     /** Party mons: the personality value (see [Mon.personality]); 0 = unknown. */
     val personality: Long = 0,
+    /** The OT id word (see [Mon.otId]); 0 = unknown. */
+    val otId: Long = 0,
 )
 
 /** [total] EXP; this level starts at [levelStart], the next at [nextLevel] (== levelStart at Lv100). */
@@ -124,6 +126,8 @@ data class SnapshotView(
     val playerGender: Int = -1,
     /** The CARD tab's data; null = the game gets no card. */
     val trainerCard: TrainerCardInfo? = null,
+    /** The wild Pokémon in front of the player (HUNT's shiny check); null outside wild battles / where unread. */
+    val wildFoe: MonView? = null,
 )
 
 /** This battler's moves with their effectiveness against [foe] instead of the
@@ -211,6 +215,7 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
             moves = moves,
             exp = if (isEgg) null else expProgress(m.species, m.level, m.exp),
             personality = m.personality,
+            otId = m.otId,
             weaknesses = matchups.weaknesses,
             resistances = matchups.resistances,
             immunities = matchups.immunities,
@@ -330,6 +335,14 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
         mapType = t.mapType,
         playerGender = t.playerGender,
         trainerCard = t.trainerCard,
+        wildFoe = t.wildFoe?.let { m ->
+            MonView(
+                species = m.species, name = speciesName(m.species), level = m.level,
+                hp = m.hp, maxHp = m.maxHp, status = "",
+                types = emptyList(), iconAsset = null,
+                personality = m.personality, otId = m.otId,
+            )
+        },
     )
 }
 

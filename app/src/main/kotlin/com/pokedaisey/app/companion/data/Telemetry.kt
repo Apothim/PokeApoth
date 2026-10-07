@@ -73,6 +73,9 @@ data class Mon(
     // The mon's personality value (its RAM struct's first word): which mon
     // the battle POKéMON pane switches to. 0 = unknown.
     val personality: Long = 0,
+    // The mon's OT id word (trainer id low 16 bits, secret id high 16): with
+    // [personality] it decides shininess (see HuntTracker). 0 = unknown.
+    val otId: Long = 0,
 )
 
 // QOL_GENDER_* in the ROM's qol_telemetry.h: what FireRed's party menu shows
@@ -140,6 +143,8 @@ data class Telemetry(
     val mapSecName: String? = null,
     /** What the TRAINER CARD shows (TrainerCard.kt); null where the game has no [NativeConfig.trainerCard]. */
     val trainerCard: TrainerCardInfo? = null,
+    /** The wild Pokémon in front of the player ([NativeConfig.wildFoeMon]); null outside wild battles. */
+    val wildFoe: Mon? = null,
 )
 
 /** v2 struct: ROM addresses of the icon-graphics tables (0 if pre-v2 ROM). */
